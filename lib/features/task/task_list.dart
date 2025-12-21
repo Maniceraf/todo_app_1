@@ -1,47 +1,56 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-import 'package:task_manager/app/add_update_category.dart';
-import 'package:task_manager/app/create_update_task.dart';
-import 'package:task_manager/app/entities/category.dart';
-import 'package:task_manager/app/entities/task.dart';
-import 'package:task_manager/app/models/task_header_model.dart';
-import 'package:task_manager/app/services/category_service.dart';
-import 'package:task_manager/app/services/task_service.dart';
-import 'package:task_manager/app/shared/common_enum.dart';
-import 'package:task_manager/app/shared/common_helper.dart';
-import 'package:task_manager/app/shared/date_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:task_manager/core/providers/repository_providers.dart';
+import 'package:task_manager/core/widgets/common/empty_state.dart';
+import 'package:task_manager/core/widgets/common/error_state.dart';
+import 'package:task_manager/core/widgets/common/loading_indicator.dart';
+import 'package:task_manager/data/models/task_list_item.dart';
+import 'package:task_manager/data/repositories/interafaces/i_category_repository.dart';
+import 'package:task_manager/data/repositories/interafaces/i_task_repository.dart';
+import 'package:task_manager/features/category/add_update_category.dart';
+import 'package:task_manager/features/task/create_update_task.dart';
+import 'package:task_manager/data/entities/category.dart';
+import 'package:task_manager/data/entities/task.dart';
+import 'package:task_manager/core/constants/app_constants.dart';
+import 'package:task_manager/core/enums/view_state.dart';
+import 'package:task_manager/core/extensions/date_extension.dart';
 
-class TaskListPage extends StatefulWidget {
+class TaskListPage extends ConsumerStatefulWidget {
   final String categoryId;
   const TaskListPage({super.key, required this.categoryId});
 
   @override
-  State<TaskListPage> createState() => _TaskListPageState();
+  ConsumerState<TaskListPage> createState() => _TaskListPageState();
 }
 
-class _TaskListPageState extends State<TaskListPage> {
+class _TaskListPageState extends ConsumerState<TaskListPage> {
   late Category category;
-  final CategoryService _categoryService = CategoryService();
-  final TaskService _taskService = TaskService();
+  late ICategoryRepository _categoryRepository;
+  late ITaskRepository _taskRepository;
   StreamSubscription? _categorySubscription;
   StreamSubscription? _taskSubscription;
 
-  List<dynamic> tasks = [];
+  List<TaskListItem> _tasks = [];
 
   ViewProcessStatus _viewProcessStatus = ViewProcessStatus.loading;
 
   @override
   void initState() {
     super.initState();
+    _categoryRepository = ref.read(categoryRepositoryProvider);
+    _taskRepository = ref.read(taskRepositoryProvider);
+
     _loadCategory();
     _loadTasks();
 
-    // listen to changes in the category box
-    _categorySubscription = Hive.box('categories').watch().listen((event) {
+    // Use repository's watch method instead of directly accessing Hive
+    _categorySubscription = _categoryRepository.watchCategories().listen((_) {
       if (!mounted) return;
 
-      if (event.deleted) {
+      // Check if category still exists
+      final cat = _categoryRepository.getCategory(widget.categoryId);
+      if (cat == null) {
         if (mounted) {
           Navigator.pop(context);
         }
@@ -50,55 +59,58 @@ class _TaskListPageState extends State<TaskListPage> {
       _loadCategory();
     });
 
-    _taskSubscription = Hive.box('tasks').watch().listen((event) {
+    _taskSubscription = _taskRepository.watchTasks().listen((_) {
+      if (!mounted) return;
       _loadTasks();
     });
   }
 
   Future<void> _loadTasks() async {
     try {
-      var items = _taskService.getTasksByCategory(widget.categoryId.toString());
-      List<dynamic> fn = [];
+      var items =
+          _taskRepository.getTasksByCategory(widget.categoryId.toString());
+
       if (items.isEmpty) {
         setState(() {
           _viewProcessStatus = ViewProcessStatus.empty;
         });
       } else {
         var today = DateTime.now();
+        List<TaskListItem> tasks = [];
 
         var lateTasks =
             items.where((x) => x.status == 0 && x.date.isLate(today));
         if (lateTasks.isNotEmpty) {
-          fn.add(TaskHeaderModel(header: "Late", color: Colors.orange));
-          fn.addAll(lateTasks);
-          fn.add("");
+          tasks.add(TaskHeaderItem("Late", Colors.orange));
+          tasks.addAll(lateTasks.map((x) => TaskItem(x)));
+          tasks.add(TaskSpacerItem());
         }
 
         var todayTasks =
             items.where((x) => x.status == 0 && x.date.isToday(today));
         if (todayTasks.isNotEmpty) {
-          fn.add(TaskHeaderModel(header: "Today", color: Colors.red));
-          fn.addAll(todayTasks);
-          fn.add("");
+          tasks.add(TaskHeaderItem("Today", Colors.red));
+          tasks.addAll(todayTasks.map((x) => TaskItem(x)));
+          tasks.add(TaskSpacerItem());
         }
 
         var futureTasks =
             items.where((x) => x.status == 0 && x.date.isFuture(today));
         if (futureTasks.isNotEmpty) {
-          fn.add(TaskHeaderModel(header: "Future", color: Colors.blue));
-          fn.addAll(futureTasks);
-          fn.add("");
+          tasks.add(TaskHeaderItem("Future", Colors.blue));
+          tasks.addAll(futureTasks.map((x) => TaskItem(x)));
+          tasks.add(TaskSpacerItem());
         }
 
         var doneTasks = items.where((x) => x.status == 1);
         if (doneTasks.isNotEmpty) {
-          fn.add(TaskHeaderModel(header: "Done", color: Colors.green));
-          fn.addAll(doneTasks);
-          fn.add("");
+          tasks.add(TaskHeaderItem("Done", Colors.green));
+          tasks.addAll(doneTasks.map((x) => TaskItem(x)));
+          tasks.add(TaskSpacerItem());
         }
 
         setState(() {
-          tasks = fn;
+          _tasks = tasks;
           _viewProcessStatus = ViewProcessStatus.loaded;
         });
       }
@@ -113,10 +125,10 @@ class _TaskListPageState extends State<TaskListPage> {
     if (!mounted) return;
 
     try {
-      var item = _categoryService.getCategory(widget.categoryId.toString());
+      var item = _categoryRepository.getCategory(widget.categoryId.toString());
 
       if (item != null) {
-        item.taskCount = _taskService
+        item.taskCount = _taskRepository
             .getTasksByCategory(widget.categoryId.toString())
             .length;
         setState(() {
@@ -146,13 +158,13 @@ class _TaskListPageState extends State<TaskListPage> {
           Container(
             width: double.infinity,
             height: double.infinity,
-            color: ColorsHelper().colors[category.color]!,
+            color: AppConstants.colors[category.color]!,
           ),
           Column(children: [
             TaskInfoUi(
                 category: category,
-                taskService: _taskService,
-                categoryService: _categoryService),
+                taskRepository: _taskRepository,
+                categoryRepository: _categoryRepository),
             _buildListView()
           ])
         ],
@@ -176,7 +188,7 @@ class _TaskListPageState extends State<TaskListPage> {
       child: Builder(builder: (context) {
         switch (_viewProcessStatus) {
           case ViewProcessStatus.loading:
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingIndicator();
           case ViewProcessStatus.loaded:
             return _buildTaskList();
           case ViewProcessStatus.error:
@@ -206,33 +218,26 @@ class _TaskListPageState extends State<TaskListPage> {
   }
 
   Widget _buildViewError() {
-    return const Center(child: Text('Error'));
+    return const ErrorState(
+      message: 'Error',
+    );
   }
 
   Widget _buildViewEmpty() {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Image(
-          image: AssetImage('assets/images/empty.png'),
-          height: 100,
-          width: 100,
-        ),
-        SizedBox(height: 20),
-        Text('No tasks found'),
-      ],
+    return const EmptyState(
+      message: 'No tasks found',
+      imagePath: 'assets/images/empty.png',
     );
   }
 
   Widget _buildTaskList() {
     return ListView.builder(
-      itemCount: tasks.length,
+      itemCount: _tasks.length,
       itemBuilder: (context, index) {
-        var item = tasks[index];
-        if (item is TaskHeaderModel) {
+        var item = _tasks[index];
+        if (item is TaskHeaderItem) {
           return _buildTaskItemHeader(item);
-        } else if (item is Task) {
+        } else if (item is TaskItem) {
           return _buildTaskItem(item);
         } else {
           return const SizedBox(
@@ -243,7 +248,7 @@ class _TaskListPageState extends State<TaskListPage> {
     );
   }
 
-  Widget _buildTaskItemHeader(TaskHeaderModel header) {
+  Widget _buildTaskItemHeader(TaskHeaderItem header) {
     return Column(
       children: [
         Text(
@@ -263,7 +268,8 @@ class _TaskListPageState extends State<TaskListPage> {
     );
   }
 
-  Widget _buildTaskItem(Task task) {
+  Widget _buildTaskItem(TaskItem item) {
+    var task = item.task;
     return Container(
       margin: const EdgeInsets.only(bottom: 5),
       decoration: BoxDecoration(
@@ -296,7 +302,7 @@ class _TaskListPageState extends State<TaskListPage> {
                   createdAt: task.createdAt,
                   updatedAt: DateTime.now(),
                 );
-                _taskService.updateTask(updatedTask);
+                _taskRepository.updateTask(updatedTask);
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -307,7 +313,7 @@ class _TaskListPageState extends State<TaskListPage> {
               }),
           trailing: IconButton(
               onPressed: () {
-                _taskService.deleteTask(task.id);
+                _taskRepository.deleteTask(task.id);
               },
               icon: const Icon(Icons.delete)),
         ),
@@ -327,20 +333,20 @@ class _TaskListPageState extends State<TaskListPage> {
 
 class TaskInfoUi extends StatelessWidget {
   final Category category;
-  final TaskService taskService;
-  final CategoryService categoryService;
+  final ITaskRepository taskRepository;
+  final ICategoryRepository categoryRepository;
   const TaskInfoUi(
       {super.key,
       required this.category,
-      required this.taskService,
-      required this.categoryService});
+      required this.taskRepository,
+      required this.categoryRepository});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       width: double.infinity,
-      color: ColorsHelper().colors[category.color]!.withOpacity(0.5),
+      color: AppConstants.colors[category.color]!.withOpacity(0.5),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,9 +384,9 @@ class TaskInfoUi extends StatelessWidget {
                                       child: const Text('Cancel')),
                                   TextButton(
                                       onPressed: () {
-                                        categoryService
+                                        categoryRepository
                                             .deleteCategory(category.id);
-                                        taskService
+                                        taskRepository
                                             .deleteTasksByCategory(category.id);
                                         Navigator.pop(context);
                                       },
@@ -419,8 +425,8 @@ class TaskInfoUi extends StatelessWidget {
                     borderRadius: BorderRadius.circular(50),
                   ),
                   child: Icon(
-                    IconsHelper().icons[category.icon]!,
-                    color: ColorsHelper().colors[category.color]!,
+                    AppConstants.icons[category.icon]!,
+                    color: AppConstants.colors[category.color]!,
                     size: 30,
                   ),
                 ),

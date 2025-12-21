@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:task_manager/app/home_page.dart';
+import 'package:task_manager/features/home/home_page.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});

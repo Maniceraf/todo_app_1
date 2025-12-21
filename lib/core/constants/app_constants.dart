@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class IconsHelper {
-  Map<int, IconData> icons = {
+class AppConstants {
+  static const Map<int, IconData> icons = {
     1: Icons.featured_play_list_outlined,
     2: Icons.home_outlined,
     3: Icons.work_outline_rounded,
@@ -12,10 +12,8 @@ class IconsHelper {
     8: Icons.laptop_mac_rounded,
     9: Icons.food_bank_outlined,
   };
-}
 
-class ColorsHelper {
-  Map<int, Color> colors = {
+  static Map<int, Color> colors = {
     1: Colors.red[300]!,
     2: Colors.blue[300]!,
     3: Colors.green[300]!,

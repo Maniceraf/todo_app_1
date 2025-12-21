@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:task_manager/app/entities/category.dart';
-import 'package:task_manager/app/shared/common_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:task_manager/core/providers/repository_providers.dart';
+import 'package:task_manager/data/entities/category.dart';
+import 'package:task_manager/core/constants/app_constants.dart';
+import 'package:task_manager/data/repositories/interafaces/i_category_repository.dart';
 
-import 'services/category_service.dart';
-
-class AddUpdateCategory extends StatefulWidget {
+class AddUpdateCategory extends ConsumerStatefulWidget {
   final Category? category;
   const AddUpdateCategory({super.key, this.category});
 
   @override
-  State<AddUpdateCategory> createState() => _AddUpdateCategoryState();
+  ConsumerState<AddUpdateCategory> createState() => _AddUpdateCategoryState();
 }
 
-class _AddUpdateCategoryState extends State<AddUpdateCategory> {
+class _AddUpdateCategoryState extends ConsumerState<AddUpdateCategory> {
+  late ICategoryRepository _categoryRepository;
+
   final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
@@ -24,8 +27,9 @@ class _AddUpdateCategoryState extends State<AddUpdateCategory> {
 
   @override
   void initState() {
-    _palette = ColorsHelper().colors.values.toList();
-    _icons = IconsHelper().icons.values.toList();
+    _categoryRepository = ref.read(categoryRepositoryProvider);
+    _palette = AppConstants.colors.values.toList();
+    _icons = AppConstants.icons.values.toList();
     _nameController.text = widget.category?.name ?? '';
     _selectedColor = widget.category != null ? widget.category!.color - 1 : 0;
     _selectedIcon = widget.category != null ? widget.category!.icon - 1 : 0;
@@ -48,7 +52,7 @@ class _AddUpdateCategoryState extends State<AddUpdateCategory> {
           icon: _selectedIcon + 1,
           createdAt: DateTime.now(),
         );
-        await CategoryService().updateCategory(category);
+        await _categoryRepository.updateCategory(category);
       } else {
         final category = Category(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -57,7 +61,7 @@ class _AddUpdateCategoryState extends State<AddUpdateCategory> {
           icon: _selectedIcon + 1,
           createdAt: DateTime.now(),
         );
-        await CategoryService().addCategory(category);
+        await _categoryRepository.createCategory(category);
       }
 
       Navigator.pop(context);

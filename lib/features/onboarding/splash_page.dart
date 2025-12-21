@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:task_manager/app/home_page.dart';
-import 'package:task_manager/app/onboarding_page.dart';
+import 'package:task_manager/features/home/home_page.dart';
+import 'package:task_manager/features/onboarding/onboarding_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});

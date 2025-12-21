@@ -1,22 +1,24 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:task_manager/app/entities/task.dart';
+import 'package:task_manager/data/entities/task.dart';
+import 'package:task_manager/data/repositories/interafaces/i_task_repository.dart';
 
-class TaskService {
+class TaskRepository implements ITaskRepository {
   static const String _boxName = 'tasks';
 
   Box get _box => Hive.box(_boxName);
 
-  // Create
-  Future<void> addTask(Task task) async {
+  @override
+  Future<Task> createTask(Task task) async {
     await _box.put(task.id, task);
+    return task;
   }
 
-  // Read all
+  @override
   List<Task> getAllTasks() {
     return _box.values.cast<Task>().toList();
   }
 
-  // Read by category
+  @override
   List<Task> getTasksByCategory(String categoryId) {
     return _box.values
         .cast<Task>()
@@ -24,22 +26,22 @@ class TaskService {
         .toList();
   }
 
-  // Read one
-  Task? getTask(int id) {
+  @override
+  Task? getTask(String id) {
     return _box.get(id);
   }
 
-  // Update
+  @override
   Future<void> updateTask(Task task) async {
     await _box.put(task.id, task);
   }
 
-  // Delete
+  @override
   Future<void> deleteTask(String id) async {
     await _box.delete(id);
   }
 
-  // Delete all by category
+  @override
   Future<void> deleteTasksByCategory(String categoryId) async {
     final tasks = getTasksByCategory(categoryId);
     for (var task in tasks) {
@@ -47,8 +49,8 @@ class TaskService {
     }
   }
 
-  // Stream for reactive updates
-  Stream<BoxEvent> watchTasks() {
-    return _box.watch();
+  @override
+  Stream<void> watchTasks() {
+    return _box.watch().map((_) {});
   }
 }

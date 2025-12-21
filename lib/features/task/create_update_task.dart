@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:task_manager/app/entities/task.dart';
-import 'package:task_manager/app/services/task_service.dart';
-import 'package:task_manager/app/shared/date_helper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:task_manager/core/providers/repository_providers.dart';
+import 'package:task_manager/data/entities/task.dart';
+import 'package:task_manager/data/repositories/interafaces/i_task_repository.dart';
+import 'package:task_manager/core/extensions/date_extension.dart';
 
-class CreateUpdateTaskForm extends StatefulWidget {
+class CreateUpdateTaskForm extends ConsumerStatefulWidget {
   final String categoryId;
   final Task? task;
   const CreateUpdateTaskForm({super.key, required this.categoryId, this.task});
 
   @override
-  State<CreateUpdateTaskForm> createState() => CreateUpdateTaskState();
+  ConsumerState<CreateUpdateTaskForm> createState() => CreateUpdateTaskState();
 }
 
-class CreateUpdateTaskState extends State<CreateUpdateTaskForm> {
+class CreateUpdateTaskState extends ConsumerState<CreateUpdateTaskForm> {
+  late ITaskRepository _taskRepository;
+
   final _nameController = TextEditingController();
   final _noteController = TextEditingController();
   final _dateController = TextEditingController();
@@ -22,6 +26,7 @@ class CreateUpdateTaskState extends State<CreateUpdateTaskForm> {
   @override
   void initState() {
     super.initState();
+    _taskRepository = ref.read(taskRepositoryProvider);
     if (widget.task != null) {
       _nameController.text = widget.task!.title;
       _noteController.text = widget.task!.description;
@@ -44,17 +49,31 @@ class CreateUpdateTaskState extends State<CreateUpdateTaskForm> {
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      final task = Task(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: _nameController.text,
-        description: _noteController.text,
-        date: _selectedDate,
-        priority: 0,
-        status: 0,
-        categoryId: widget.categoryId,
-        createdAt: DateTime.now(),
-      );
-      await TaskService().addTask(task);
+      if (widget.task != null) {
+        final task = Task(
+          id: widget.task!.id,
+          title: _nameController.text,
+          description: _noteController.text,
+          date: _selectedDate,
+          priority: 0,
+          status: 0,
+          categoryId: widget.categoryId,
+          createdAt: DateTime.now(),
+        );
+        await _taskRepository.updateTask(task);
+      } else {
+        final task = Task(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: _nameController.text,
+          description: _noteController.text,
+          date: _selectedDate,
+          priority: 0,
+          status: 0,
+          categoryId: widget.categoryId,
+          createdAt: DateTime.now(),
+        );
+        await _taskRepository.createTask(task);
+      }
 
       Navigator.pop(context);
 

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/adapters.dart';
-import 'package:task_manager/app/entities/category.dart';
-import 'package:task_manager/app/entities/task.dart';
-import 'package:task_manager/app/splash_page.dart';
+import 'package:task_manager/data/entities/category.dart';
+import 'package:task_manager/data/entities/task.dart';
+import 'package:task_manager/features/onboarding/splash_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +38,9 @@ Future<void> main() async {
     }
   }
 
-  runApp(const MyApp());
+  runApp(const ProviderScope(
+    child: MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
