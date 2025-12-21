@@ -25,6 +25,7 @@ class _TaskListPageState extends State<TaskListPage> {
   final CategoryService _categoryService = CategoryService();
   final TaskService _taskService = TaskService();
   StreamSubscription? _categorySubscription;
+  StreamSubscription? _taskSubscription;
 
   List<dynamic> tasks = [];
 
@@ -49,7 +50,7 @@ class _TaskListPageState extends State<TaskListPage> {
       _loadCategory();
     });
 
-    _categorySubscription = Hive.box('tasks').watch().listen((event) {
+    _taskSubscription = Hive.box('tasks').watch().listen((event) {
       _loadTasks();
     });
   }
@@ -132,6 +133,7 @@ class _TaskListPageState extends State<TaskListPage> {
   @override
   void dispose() {
     _categorySubscription?.cancel();
+    _taskSubscription?.cancel();
     super.dispose();
   }
 

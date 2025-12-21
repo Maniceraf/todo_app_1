@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +22,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final CategoryService _categoryService = CategoryService();
   final TaskService _taskService = TaskService();
+  StreamSubscription? _categorySubscription;
+  StreamSubscription? _taskSubscription;
 
   List<Category> categories = [];
   List<Task> tasks = [];
@@ -35,11 +38,11 @@ class _HomePageState extends State<HomePage> {
     _loadCategories();
 
     // listen to changes in the category box
-    Hive.box('categories').watch().listen((event) {
+    _categorySubscription = Hive.box('categories').watch().listen((event) {
       _loadCategories();
     });
 
-    Hive.box('tasks').watch().listen((event) {
+    _taskSubscription = Hive.box('tasks').watch().listen((event) {
       _loadCategories();
     });
   }
@@ -78,6 +81,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _categorySubscription?.cancel();
+    _taskSubscription?.cancel();
     super.dispose();
   }
 

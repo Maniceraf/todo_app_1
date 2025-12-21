@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:task_manager/app/entities/category.dart';
 import 'package:task_manager/app/entities/task.dart';
@@ -51,7 +50,12 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
-        textTheme: GoogleFonts.interTextTheme(),
+        fontFamily: 'Inter', // Use local font instead of Google Fonts
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(fontFamily: 'Inter'),
+          bodyMedium: TextStyle(fontFamily: 'Inter'),
+          bodySmall: TextStyle(fontFamily: 'Inter'),
+        ),
       ),
       home: const SplashPage(),
       debugShowCheckedModeBanner: false,
