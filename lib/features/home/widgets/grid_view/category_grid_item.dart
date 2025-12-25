@@ -35,15 +35,20 @@ class CategoryGridItem extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(category.name,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold)),
-              Text("${category.taskCount} Tasks",
-                  style: TextStyle(
-                      fontSize: 14,
-                      color: category.taskCount > 0
-                          ? Colors.red
-                          : Colors.grey[500])),
+              Text(
+                category.name,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                "${category.taskCount} Tasks",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: category.taskCount > 0 ? Colors.red : Colors.grey[500],
+                ),
+              ),
             ],
           )
         ],
